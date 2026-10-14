@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Analyzer</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      width: 340px;
+      max-width: calc(100% - 60px);
+      box-shadow: 0 5px 20px #0002;
+    }
+
+    h2 {
+      text-align: center;
+      color: #3730a3;
+    }
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border: 1px solid #aaa;
+      border-radius: 7px;
+    }
+
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .show-btn {
+      width: 100%;
+      background: #e0e7ff;
+    }
+
+    .bar {
+      height: 8px;
+      background: #ddd;
+      border-radius: 5px;
+      margin: 15px 0;
+      overflow: hidden;
+    }
+
+    #progress {
+      height: 100%;
+      width: 0;
+      transition: width 0.2s;
+    }
+
+    li {
+      margin: 10px 0;
+    }
+
+    .good {
+      color: green;
+    }
+
+    .bad {
+      color: #d11;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Password Analyzer 🔐</h2>
+
+    <label for="password">Enter a sample password:</label>
+    <input
+      type="password"
+      id="password"
+      placeholder="Enter password"
+      autocomplete="off"
+      spellcheck="false"
+    >
+
+    <button class="show-btn" id="toggle">Show Password</button>
+
+    <h3 id="strength">Strength: Not checked</h3>
+
+    <div
+      class="bar"
+      role="progressbar"
+      aria-label="Password strength"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      id="bar"
+    >
+      <div id="progress"></div>
+    </div>
+
+    <p id="feedback" aria-live="polite">
+      Enter a password to analyze it.
+    </p>
+
+    <h3>Security checks</h3>
+    <ul id="checks">
+      <li>Length: Not checked</li>
+      <li>Lowercase: Not checked</li>
+      <li>Uppercase: Not checked</li>
+      <li>Number: Not checked</li>
+      <li>Special character: Not checked</li>
+    </ul>
+
+    <p class="note">
+      This demo analyzes passwords locally in your browser.
+      It does not send or save the entered password.
+      Its rating is an estimate, not a guarantee of security.
+    </p>
+  </div>
+
+  <script>
+    const password = document.getElementById("password");
+    const strength = document.getElementById("strength");
+    const progress = document.getElementById("progress");
+    const feedback = document.getElementById("feedback");
+    const checks = document.getElementById("checks");
+    const bar = document.getElementById("bar");
+
+    function analyzePassword() {
+      const value = password.value;
+
+      const rules = [
+        {
+          label: "At least 12 characters",
+          test: value.length >= 12
+        },
+        {
+          label: "Lowercase letter",
+          test: /[a-z]/.test(value)
+        },
+        {
+          label: "Uppercase letter",
+          test: /[A-Z]/.test(value)
+        },
+        {
+          label: "Number",
+          test: /[0-9]/.test(value)
+        },
+        {
+          label: "Special character",
+          test: /[^A-Za-z0-9]/.test(value)
+        }
+      ];
+
+      checks.innerHTML = "";
+
+      rules.forEach(rule => {
+        const item = document.createElement("li");
+        item.textContent =
+          (rule.test ? "✓ " : "✗ ") + rule.label;
+        item.className = rule.test ? "good" : "bad";
+        checks.appendChild(item);
+      });
+
+      if (value.length === 0) {
+        strength.textContent = "Strength: Not checked";
+        progress.style.width = "0%";
+        progress.style.background = "#ddd";
+        feedback.textContent = "Enter a password to analyze it.";
+        bar.setAttribute("aria-valuenow", "0");
+        return;
+      }
+
+      const passed = rules.filter(rule => rule.test).length;
+      const hasRepeated = /(.)\1{3,}/.test(value);
+      const commonPatterns =
+        /password|qwerty|letmein|admin|welcome|123456/i.test(value);
+
+      let score = passed * 20;
+
+      if (value.length >= 16) score += 10;
+      if (hasRepeated) score -= 15;
+      if (commonPatterns) score -= 30;
+
+      score = Math.max(0, Math.min(100, score));
+
+      let level;
+      let color;
+
+      if (score < 40) {
+        level = "Weak";
+        color = "#dc2626";
+      } else if (score < 80) {
+        level = "Medium";
+        color = "#d97706";
+      } else {
+        level = "Strong";
+        color = "#16a34a";
+      }
+
+      strength.textContent = "Strength: " + level;
+      progress.style.width = score + "%";
+      progress.style.background = color;
+      bar.setAttribute("aria-valuenow", String(score));
+
+      if (commonPatterns) {
+        feedback.textContent =
+          "Avoid common words and predictable sequences.";
+      } else if (hasRepeated) {
+        feedback.textContent =
+          "Avoid long runs of the same character.";
+      } else if (score < 80) {
+        feedback.textContent =
+          "Try a longer, unique password or passphrase.";
+      } else {
+        feedback.textContent =
+          "Good result! Use a unique password for every account.";
+      }
+    }
+
+    password.addEventListener("input", analyzePassword);
+
+    document.getElementById("toggle").addEventListener("click", () => {
+      const isHidden = password.type === "password";
+      password.type = isHidden ? "text" : "password";
+      document.getElementById("toggle").textContent =
+        isHidden ? "Hide Password" : "Show Password";
+    });
+  </script>
+</body>
+</html>
